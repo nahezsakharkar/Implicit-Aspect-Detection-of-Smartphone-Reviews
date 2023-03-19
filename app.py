@@ -1,8 +1,21 @@
+from spacy.language import Language
 import spacy
 import streamlit as st
 from spacy.symbols import ORTH, LEMMA, POS
 
 nlp = spacy.load("en_core_web_sm")
+
+
+def set_custom_boundaries(doc):
+    for token in doc[:-1]:
+        # Check for comma or conjunction as sentence boundary
+        if token.text in [",", "and", "or", "but", "yet", "so", "nor"]:
+            doc[token.i+1].is_sent_start = True
+    return doc
+
+
+Language.component("set_custom_boundaries", func=set_custom_boundaries)
+nlp.add_pipe("set_custom_boundaries", before="parser")
 
 
 def tokenize_words(text):
@@ -31,78 +44,226 @@ def clean_array(texts):
 
 
 def detect_implicit_aspects(review):
-    words = tokenize_words(review)
-    filtered_words = list(filter(bool, map(clean_text, clean_array(
-        [word for word in words if word.lower() not in nlp.Defaults.stop_words]))))
 
-    purchased_keywords = ["bought", "purchased", "acquired", "got",
-                          "obtained", "picked", "selected", "chose", "decided", "gathered"]
-    age_keywords = ["old", "new", "years", "vintage", "outdated",
-                    "recent", "out-of-date", "ancient", "modern", "obsolete"]
-    performance_keywords = ["performance", "work", "work well",
-                            "work efficiently", "function", "functionality", "operate", "run", "execute"]
-    design_keywords = ["design", "appearance", "look", "style",
-                       "aesthetic", "shape", "form", "structure", "outline", "configuration"]
-    screen_keywords = ["screen", "display", "monitor", "view", "picture",
-                       "image", "resolution", "size", "aspect ratio", "brightness"]
-    battery_keywords = ["battery", "power", "energy", "charge", "duration",
-                        "life", "capacity", "runtime", "endurance", "lasting", "dead"]
-    brand_keywords = ["brand", "manufacturer", "make", "producer",
-                      "label", "logo", "identity", "reputation", "status", "name"]
-    cost_keywords = ["price", "cost", "value", "worth", "expense", "payment",
-                     "amount", "fee", "charge", "budget", "low-end", "mid-range", "high-end", "sale", "expensive", "affordable",  "costly", "reasonable", "budget-friendly", "pricey", "inexpensive", "valuable", "cheap", "economical",
-                     "high-priced", "overpriced", "premium", "discounted", "competitive", "worthwhile", "over-budget", "extravagant", "Low-cost", "Pocket-friendly"]
-    camera_keywords = ["cameras", "photography", "lens", "shot",
-                       "picture", "image", "snapshot", "focus", "flash", "resolution"]
-    os_keywords = ["android", "ios", "windows phone", "windows", "Kaios",
-                           "harmonyos", "lineageOS", "oxygen os", "oxygen", "miui", "color os", "color", "realme ui"]
-    experience_keywords = ["experience", "feeling", "impression", "perception",
-                           "sensation", "judgment", "opinion", "attitude", "reaction", "view"]
+    purchased_keywords = {"explicit": ["bought", "purchased", "ordered"], "noun": ["acquired", "got", "obtained", "picked", "selected", "chose", "decided", "gathered", "gifted"],
+                          "adj": ["new", "latest"]}
+    age_keywords = {"explicit": ["old", "new", 'fresh', 'latest', 'current', 'up-to-date', 'modern', 'contemporary', 'brand-new',
+                                 'recently released', 'state-of-the-art', 'cutting-edge', 'latest technology', 'newest model/version',
+                                 'just released', 'recently launched', "years"], "noun": ["qwerty", "analog"],
+                    "adj": ["vintage", "outdated", "retro", "recent", "out-of-date", "ancient", "modern", "obsolete"]}
+    performance_keywords = {"explicit": ["perform", "performance"], "noun": ["work", "work well", "work efficiently", "function", "functionality", "operate", "run", "execute"],
+                            "adj": ["Smooth", "Snappy", "fast", "responsive", "reliable", "efficient", "dynamic", "beast"]}
+    design_keywords = {"explicit": ["design", "appearance", "look"], "noun": ["style", "shape", "form", "structure", "outline", "configuration"],
+                       "adj": ["sleek", "beautiful", "elegant", "stylish", "minimalistic", "attractive", "eyecatching",
+                               "futuristic", "classy", "slim", "compact", "aesthetic", "comfortable "]}
+    screen_keywords = {"explicit": ["screen", "display", ], "noun": ["monitor", "view", "picture", "image", "resolution", "size", "ratio", "brightness",
+                                                                     'contrast', 'pixel', 'color', 'viewing', 'touchscreen', 'amoled', 'lcd', 'oled', 'refresh rate',
+                                                                     'bezel', 'hdr', 'notch', 'protector'],
+                       "adj": ['clear', 'sharp', 'vivid', 'bright', 'dim', 'dull', 'high-resolution', 'low-resolution', 'color-rich', "anti-galre"
+                               'color-accurate', 'wide-angle', 'narrow-angle', 'responsive', 'smooth', 'fast', 'slow', 'immersive', 'reflective', 'glare-free']}
+    battery_keywords = {"explicit": ["battery", ], "noun": ["power", "energy", "charge", "duration", "life", "capacity", "runtime", "endurance", "lasting", "dead",
+                                                            'capacity', 'usage', 'drain', 'charging time', 'charging', 'wireless', 'health', 'saver mode',
+                                                            'backup', 'consumption', 'charging port', 'endurance'],
+                        "adj": ['long-lasting', 'efficient', 'reliable', 'powerful', 'fast-charging', 'wireless', 'low-power',  'durable',
+                                'energy-saving', 'sustainable', 'eco-friendly', 'dependable']}
+    brand_keywords = {"explicit": ["brand", "manufacturer", ], "noun": ["make", "producer", "label", "logo", "identity", "reputation", "status", "name", 'popularity',
+                                                                        'market share', 'innovation', 'customer support', 'product lineup', 'availability',
+                                                                        'connectivity',  'accessories', 'warranty'],
+                      "adj": ['popular', 'reliable', 'innovative', 'iconic', 'trusted', 'sophisticated', 'highquality', 'technologically advanced',
+                              'user-friendly', 'cutting-edge', 'durable',  'versatile', 'efficient', 'longlasting', 'advanced', 'competitive']}
+    cost_keywords = {"explicit": ["price", "cost", "value", "worth"], "noun": ["expense", "payment", "amount", "fee", "charge", "budget", "sale"],
+                     "adj": ["low-end", "mid-range", "high-end", "expensive", "affordable", "costly", "reasonable", "budgetfriendly", "pricey", "inexpensive",
+                             "valuable", "cheap", "economical", "highpriced", "overpriced", "premium", "discounted", "competitive", "worthwhile",
+                             "over-budget", "extravagant", "Low-cost", "Pocketfriendly"]}
+    camera_keywords = {"explicit": ["cameras"], "noun": ["photography", "lens", "shot", "picture", "image", "snapshot", "focus", "flash", "resolution", 'aperture',
+                                                         'zoom', 'megapixel', 'autofocus', 'shutter', 'stabilization',  'hdr', 'lowlight',
+                                                         'depth perception', 'selfie', 'video', 'motion',  'mode', 'panorama', 'telephoto',
+                                                         'ultrawide', 'night mode', 'macro', 'bokeh'],
+                       "adj": ['clear', 'sharp', 'detailed', 'vivid', 'bright', 'colorful', 'fast', 'accurate',  'low noise', 'crisp', 'dynamic',
+                               'balanced', 'professional', 'artistic', 'smooth', 'consistent',  'stunning', 'natural', 'impressive']}
+    os_keywords = {"explicit": ["operating system"], "noun": ["android", "ios", "windows", "windows", "Kaios", "harmonyos", "lineage os", "oxygen os", "oxygen", "miui", "color os",
+                                                              "color", "realme ui", 'interface', 'customization', 'compatibility', 'security', 'stability', 'updates', 'integration',
+                                                              'navigation', 'multitasking', 'accessibility',  'functionality', 'efficiency',
+                                                              'control', 'interface', 'operating system version',  'compatibility', 'ai'],
+                   "adj": ['intuitive', 'efficient', 'customizable', 'seamless', 'secure', 'reliable', 'stable', 'fast',  'responsive', 'user',
+                           'robust', 'versatile', 'innovative', 'modern', 'streamlined',  'fluid', 'dynamic', 'adaptive', 'consistent']}
+    experience_keywords = {"explicit": ["experience"], "noun": ["feeling", "impression", "perception", "sensation", "judgment", "opinion", "attitude", "reaction", "view"],
+                           "adj": ['memorable', 'pleasant', 'unforgettable', 'challenging', 'exciting', 'educational', 'unique', 'incredible',
+                                   'fulfilling', 'inspiring', 'refreshing', 'empowering', 'eyeopening', 'rewarding', 'intense', 'engaging', 'transformative',
+                                   'relaxing', 'disappointing', 'frustrating', "superb"]
+                           }
+
+    phone_keywords = ["phone", "smartphone", "cell", "device", "handset"]
 
     aspects = {}
-    for key in purchased_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The phone was purchased."
+    # adding sentences as key in aspects = {"sentence-1" : {}, "sentence-2" : {}}
+    for sent in review.sents:
+        aspects[sent] = {}
 
-    for key in age_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The age of the phone is mentioned."
+    for sentence, Aspect_Dict in aspects.items():
+        Aspect_Dict["subject"] = []
+        Aspect_Dict["object"] = []
+        Aspect_Dict["explicit"] = {}
+        Aspect_Dict["implicit"] = {}
+        # filtered words has all the tokens of all sentences each
+        filtered_words = list(filter(bool, map(clean_text, clean_array(
+            [word for word in tokenize_words(sentence) if word.lower() not in nlp.Defaults.stop_words]))))
 
-    for key in performance_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The phone's performance is discussed."
+        for token in sentence:
+            if token.dep_ == "nsubj":
+                Aspect_Dict["subject"].append(token.text)
+            if token.dep_ == "dobj":
+                Aspect_Dict["object"].append(token.text)
 
-    for key in design_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The design of the phone is mentioned."
+        def check_every_keyword(arr):
+            # for every element in purchases explicit list
+            for element in purchased_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The phone was purchased."
 
-    for key in screen_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The screen size is discussed."
+            for element in purchased_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The phone was purchased."
 
-    for key in battery_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The battery life is discussed."
+            for element in purchased_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The phone was purchased."
 
-    for key in brand_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The brand is mentioned."
+            # for every element in age explicit list
+            for element in age_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The age of the phone is mentioned."
 
-    for key in cost_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The cost is mentioned."
+            for element in age_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The age of the phone is mentioned."
 
-    for key in camera_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The camera is discussed."
-            
-    for key in os_keywords:
-        if key.lower() in filtered_words:
-            aspects[key] = "The Operating System is Mentioned."
+            for element in age_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The age of the phone is mentioned."
 
-    for key in experience_keywords:
-        if stem_token(key).lower() in filtered_words:
-            aspects[key] = "The overall experience with the phone is discussed."
+            # for every element in performance explicit list
+            for element in performance_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The phone's performance is discussed."
+
+            for element in performance_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The phone's performance is discussed."
+
+            for element in performance_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The phone's performance is discussed."
+
+            # for every element in design explicit list
+            for element in design_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The design of the phone is mentioned."
+
+            for element in design_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The design of the phone is mentioned."
+
+            for element in design_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The design of the phone is mentioned."
+
+            # for every element in screen explicit list
+            for element in screen_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The screen is discussed."
+
+            for element in screen_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The screen is discussed."
+
+            for element in screen_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The screen is discussed."
+
+            # for every element in battery explicit list
+            for element in battery_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The battery life is discussed."
+
+            for element in battery_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The battery life is discussed."
+
+            for element in battery_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The battery life is discussed."
+
+            # for every element in brand explicit list
+            for element in brand_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The brand is mentioned."
+
+            for element in brand_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The brand is mentioned."
+
+            for element in brand_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The brand is mentioned."
+
+            # for every element in cost explicit list
+            for element in cost_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The cost is mentioned."
+
+            for element in cost_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The cost is mentioned."
+
+            for element in cost_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The cost is mentioned."
+
+            # for every element in camera explicit list
+            for element in camera_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The camera is discussed."
+
+            for element in camera_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The camera is discussed."
+
+            for element in camera_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The camera is discussed."
+
+            # for every element in os explicit list
+            for element in os_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The Operating System is Mentioned."
+
+            for element in os_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The Operating System is Mentioned."
+
+            for element in os_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The Operating System is Mentioned."
+
+            # for every element in experience explicit list
+            for element in experience_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The overall experience with the phone is discussed."
+
+            for element in experience_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The overall experience with the phone is discussed."
+
+            for element in experience_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The overall experience with the phone is discussed."
+
+        check_every_keyword(filtered_words)
+        if len(Aspect_Dict["subject"]) >= 1:
+            if stem_token(Aspect_Dict["subject"][0]) in phone_keywords:
+                Aspect_Dict["implicit"][Aspect_Dict["subject"]
+                                        [0]] = "The Phone as whole is described."
 
     return aspects
 
@@ -140,7 +301,7 @@ def app():
 
         st.subheader("The following techniques were used to build this app:")
         st.write("- Rule Based Technique: Rule-based techniques are one approach to implicit aspect detection in natural language processing. This technique involves the creation of a set of rules or heuristics that can identify implicit aspects of a product or service based on specific patterns in the text. For example, a rule-based system might identify aspects related to a product's size or color based on specific adjectives or descriptions in the text. One advantage of rule-based techniques is that they can be highly accurate when applied to specific domains or languages. However, developing effective rules can be time-consuming and require significant expertise in the domain being analyzed. Additionally, rule-based systems may struggle to handle complex and nuanced language, or new and previously unseen patterns in the text. Despite these limitations, rule-based techniques remain a valuable tool in implicit aspect detection, particularly when combined with other approaches such as machine learning.")
-        
+
         st.subheader("About the creators of the App:")
         st.write(
             "This App(Mini Project) was created by Nahez Sakharkar(44), Karan Pansare(34) and Moin Qazi(40) Under the mentorship of Mr. Ameya Parkar.")
@@ -153,25 +314,47 @@ def app():
         doc = nlp(review)
 
         if review:
-            implicit_aspects = detect_implicit_aspects(doc)
-            if len(implicit_aspects) > 0:
-                st.write("The implicit aspects in the review are:")
-                words = review.split()
-                for i in range(len(words)):
-                    if words[i] in implicit_aspects.keys():
-                        words[i] = f"<b><u>{words[i]}</u></b>"
+            aspects = detect_implicit_aspects(doc)
+            if len(aspects) > 0:
+                # words = review.split()
+                # for i in range(len(words)):
+                #     if words[i] in aspects.keys():
+                #         words[i] = f"<b><u>{words[i]}</u></b>"
 
-                # Join words back into sentence
-                sentence = " ".join(words)
+                # # Join words back into sentence
+                # sentence = " ".join(words)
 
-                # Display sentence with bold text
-                st.markdown(sentence, unsafe_allow_html=True)
+                # # Display sentence with bold text
+                # st.markdown(sentence, unsafe_allow_html=True)
+                
+                has_explicit = any(isinstance(value, dict) and "explicit" in value and bool(
+                    value["explicit"]) for value in aspects.values())
+                if has_explicit:
+                    st.write("The Explicit aspects in the review are:")
+                    for key, value in aspects.items():
+                        st.write(key)
+                        if isinstance(value, dict) and "explicit" in value and value["explicit"]:
+                            for k, v in value["explicit"].items():
+                                st.write("  " + k + ": " + v)
+                else:
+                    st.write("No Explicit Aspects found in the review.")
+                    
 
-                for key, value in implicit_aspects.items():
-                    st.write(key + " : " + value)
+                has_implicit = any(isinstance(value, dict) and "implicit" in value and bool(
+                    value["implicit"]) for value in aspects.values())
+
+                if has_implicit:
+                    st.write("The Implicit aspects in the review are:")
+                    for key, value in aspects.items():
+                        st.write(key)
+                        if isinstance(value, dict) and "implicit" in value and value["implicit"]:
+                            for k, v in value["implicit"].items():
+                                st.write("  " + k + ": " + v)
+                else:
+                    st.write("No Implicit Aspects found in the review.")
 
             else:
-                st.write("No implicit aspects found in the review.")
+                st.write("No Aspects found in the review.")
 
     # Show the appropriate page based on the user's choice
     if choice == "Detect Implicit Aspects":
