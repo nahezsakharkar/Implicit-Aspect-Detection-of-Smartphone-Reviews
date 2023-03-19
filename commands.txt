@@ -1,0 +1,17 @@
+// create dump into requirement file
+pip list --format=freeze > requirements.txt
+
+// create environment
+py -m venv env
+
+// activate environment
+env/Scripts/activate 
+
+// install from requirement
+pip install -r requirements.txt
+
+// run streamlit app
+streamlit run app.py
+
+// download en_core_web_sm
+spacy download en_core_web_sm
