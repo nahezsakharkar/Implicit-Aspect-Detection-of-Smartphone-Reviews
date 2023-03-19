@@ -109,6 +109,12 @@ def detect_implicit_aspects(review):
 
 # Streamlit app
 def app():
+    st.set_page_config(
+        page_title="Implicit Aspect Detection",
+        page_icon="🧊",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
     st.title("Implicit Aspect Detection from Smartphone Reviews")
 
     menu = ["Detect Implicit Aspects", "About"]
