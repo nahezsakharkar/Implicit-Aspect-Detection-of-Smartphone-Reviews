@@ -47,7 +47,7 @@ def detect_implicit_aspects(review):
 
     purchased_keywords = {"explicit": ["bought", "purchased", "ordered"], "noun": ["acquired", "got", "obtained", "picked", "selected", "chose", "decided", "gathered", "gifted"],
                           "adj": ["new", "latest"]}
-    age_keywords = {"explicit": ["old", "new", 'fresh', 'latest', 'current', 'up-to-date', 'modern', 'contemporary', 'brand-new',
+    age_keywords = {"explicit": ["old", "new", 'fresh', 'latest', 'current', 'up-to-date', 'modern', 'contemporary',
                                  'recently released', 'state-of-the-art', 'cutting-edge', 'latest technology', 'newest model/version',
                                  'just released', 'recently launched', "years"], "noun": ["qwerty", "analog"],
                     "adj": ["vintage", "outdated", "retro", "recent", "out-of-date", "ancient", "modern", "obsolete"]}
@@ -60,7 +60,7 @@ def detect_implicit_aspects(review):
                                                                      'contrast', 'pixel', 'color', 'viewing', 'touchscreen', 'amoled', 'lcd', 'oled', 'refresh rate',
                                                                      'bezel', 'hdr', 'notch', 'protector'],
                        "adj": ['clear', 'sharp', 'vivid', 'bright', 'dim', 'dull', 'high-resolution', 'low-resolution', 'color-rich', "anti-galre"
-                               'color-accurate', 'wide-angle', 'narrow-angle', 'responsive', 'smooth', 'fast', 'slow', 'immersive', 'reflective', 'glare-free']}
+                               'color-accurate', 'wide-angle', 'narrow-angle', 'responsive', 'smooth', 'fast', 'slow', 'immersive', 'reflective', 'glare-free', "huge"]}
     battery_keywords = {"explicit": ["battery", ], "noun": ["power", "energy", "charge", "duration", "life", "capacity", "runtime", "endurance", "lasting", "dead",
                                                             'capacity', 'usage', 'drain', 'charging time', 'charging', 'wireless', 'health', 'saver mode',
                                                             'backup', 'consumption', 'charging port', 'endurance'],
@@ -93,7 +93,8 @@ def detect_implicit_aspects(review):
                                    'relaxing', 'disappointing', 'frustrating', "superb"]
                            }
 
-    phone_keywords = ["phone", "smartphone", "cell", "device", "handset"]
+    phone_keywords = {"subjects" : ["phone", "smartphone", "cell", "device", "handset"], 
+                      "adjectives" : ["awesome", "fantastic", "cool", "superb", "perfect", "bad", "trash", "worst"]}
 
     aspects = {}
     # adding sentences as key in aspects = {"sentence-1" : {}, "sentence-2" : {}}
@@ -103,6 +104,7 @@ def detect_implicit_aspects(review):
     for sentence, Aspect_Dict in aspects.items():
         Aspect_Dict["subject"] = []
         Aspect_Dict["object"] = []
+        Aspect_Dict["adjective"] = []
         Aspect_Dict["explicit"] = {}
         Aspect_Dict["implicit"] = {}
         # filtered words has all the tokens of all sentences each
@@ -114,6 +116,8 @@ def detect_implicit_aspects(review):
                 Aspect_Dict["subject"].append(token.text)
             if token.dep_ == "dobj":
                 Aspect_Dict["object"].append(token.text)
+            if token.pos_ == "ADJ" or token.pos_ == "ADV":
+                Aspect_Dict["adjective"].append(token.text)
 
         def check_every_keyword(arr):
             # for every element in purchases explicit list
@@ -260,10 +264,11 @@ def detect_implicit_aspects(review):
                     Aspect_Dict["implicit"][element] = "The overall experience with the phone is discussed."
 
         check_every_keyword(filtered_words)
-        if len(Aspect_Dict["subject"]) >= 1:
-            if stem_token(Aspect_Dict["subject"][0]) in phone_keywords:
-                Aspect_Dict["implicit"][Aspect_Dict["subject"]
-                                        [0]] = "The Phone as whole is described."
+        if len(Aspect_Dict["subject"]) > 0:
+            if stem_token(Aspect_Dict["subject"][0]) in phone_keywords["subjects"]:
+                if len(Aspect_Dict["adjective"]) > 0:
+                    if stem_token(Aspect_Dict["adjective"][0]) in phone_keywords["adjectives"]:
+                            Aspect_Dict["implicit"][Aspect_Dict["subject"][0]] = "The Phone as whole is described."
 
     return aspects
 
@@ -330,7 +335,7 @@ def app():
                 has_explicit = any(isinstance(value, dict) and "explicit" in value and bool(
                     value["explicit"]) for value in aspects.values())
                 if has_explicit:
-                    st.write("The Explicit aspects in the review are:")
+                    st.subheader("The Explicit aspects in the review are:")
                     for key, value in aspects.items():
                         st.write(key)
                         if isinstance(value, dict) and "explicit" in value and value["explicit"]:
@@ -344,7 +349,7 @@ def app():
                     value["implicit"]) for value in aspects.values())
 
                 if has_implicit:
-                    st.write("The Implicit aspects in the review are:")
+                    st.subheader("The Implicit aspects in the review are:")
                     for key, value in aspects.items():
                         st.write(key)
                         if isinstance(value, dict) and "implicit" in value and value["implicit"]:
