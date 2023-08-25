@@ -113,7 +113,6 @@ def detect_implicit_aspects(review, nlp):
             "pixel",
             "color",
             "viewing",
-            "touchscreen",
             "amoled",
             "lcd",
             "oled",
@@ -135,6 +134,7 @@ def detect_implicit_aspects(review, nlp):
             "color-rich",
             "anti-galre" "color-accurate",
             "wide-angle",
+            "eye-friendly",
             "narrow-angle",
             "responsive",
             "smooth",
@@ -145,6 +145,19 @@ def detect_implicit_aspects(review, nlp):
             "glare-free",
             "huge",
         ],
+    }
+    interactability_keywords = {
+        "explicit": [
+            "touch",
+            "touchscreen",
+            "haptic",
+            "scrolling",
+            "gesture",
+            "multi-touch",
+            "stylus",
+        ],
+        "noun": ["feedback", "interactable", "responsiveness"],
+        "adj": ["interactive", "responsive"],
     }
     battery_keywords = {
         "explicit": [
@@ -542,6 +555,19 @@ def detect_implicit_aspects(review, nlp):
             for element in screen_keywords["adj"]:
                 if stem_token(element) in arr:
                     Aspect_Dict["implicit"][element] = "The screen is discussed."
+
+            # for every element in interactibility explicit list
+            for element in interactability_keywords["explicit"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["explicit"][element] = "The interactibility is discussed."
+
+            for element in interactability_keywords["noun"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The interactibility is discussed."
+
+            for element in interactability_keywords["adj"]:
+                if stem_token(element) in arr:
+                    Aspect_Dict["implicit"][element] = "The interactibility is discussed."
 
             # for every element in battery explicit list
             for element in battery_keywords["explicit"]:
