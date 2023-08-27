@@ -7,8 +7,6 @@ from detection_modules.preprocessing import nlp
 from about_page import about
 from detection_modules.detection_page import detect_implicit_aspects_page
 
-KEY_OPENAI_API = "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"
-
 
 # Streamlit app
 def app():
