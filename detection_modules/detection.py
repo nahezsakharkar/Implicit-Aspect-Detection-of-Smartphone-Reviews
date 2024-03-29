@@ -152,12 +152,13 @@ def detect_implicit_aspects(review, nlp):
             "touchscreen",
             "haptic",
             "scrolling",
+            "UI",
             "gesture",
             "multi-touch",
             "stylus",
         ],
         "noun": ["feedback", "interactable", "responsiveness"],
-        "adj": ["interactive", "responsive"],
+        "adj": ["interactive", "responsive", "lag", "smooth operator"],
     }
     battery_keywords = {
         "explicit": [
@@ -270,8 +271,9 @@ def detect_implicit_aspects(review, nlp):
             "worthwhile",
             "over-budget",
             "extravagant",
-            "Low-cost",
-            "Pocketfriendly",
+            "low-cost",
+            "pocketfriendly",
+            "bang for the buck",
         ],
     }
     camera_keywords = {
@@ -426,20 +428,24 @@ def detect_implicit_aspects(review, nlp):
         "subjects": ["phone", "smartphone", "cell", "device", "handset"],
         "adjectives": [
             "awesome",
-            "fantastic",
+            "good" "fantastic",
             "cool",
             "superb",
             "perfect",
             "bad",
             "trash",
             "worst",
+            "lit",
+            "goat",
+            "op",
+            "OP",
         ],
     }
 
     aspects = {}
     # adding sentences as key in aspects = {"sentence-1" : {}, "sentence-2" : {}}
-    for sent in review.sents:
-        aspects[sent] = {}
+    for sent in review:
+        aspects[nlp(sent)] = {}
 
     for sentence, Aspect_Dict in aspects.items():
         Aspect_Dict["subject"] = []
@@ -448,7 +454,7 @@ def detect_implicit_aspects(review, nlp):
         Aspect_Dict["explicit"] = {}
         Aspect_Dict["implicit"] = {}
         # filtered words has all the tokens of all sentences each
-        filtered_words = list(
+        filtered_words = [s.lower() for s in list(
             filter(
                 bool,
                 map(
@@ -462,14 +468,18 @@ def detect_implicit_aspects(review, nlp):
                     ),
                 ),
             )
-        )
+        )]
 
         for token in sentence:
             if token.dep_ == "nsubj":
                 Aspect_Dict["subject"].append(token.text)
             if token.dep_ == "dobj":
                 Aspect_Dict["object"].append(token.text)
-            if token.pos_ == "ADJ" or token.pos_ == "ADV":
+            if (
+                token.text in phone_keywords["adjectives"]
+                or token.pos_ == "ADJ"
+                or token.pos_ == "ADV"
+            ):
                 Aspect_Dict["adjective"].append(token.text)
 
         def check_every_keyword(arr):
@@ -559,15 +569,21 @@ def detect_implicit_aspects(review, nlp):
             # for every element in interactibility explicit list
             for element in interactability_keywords["explicit"]:
                 if stem_token(element) in arr:
-                    Aspect_Dict["explicit"][element] = "The interactibility is discussed."
+                    Aspect_Dict["explicit"][
+                        element
+                    ] = "The interactibility is discussed."
 
             for element in interactability_keywords["noun"]:
                 if stem_token(element) in arr:
-                    Aspect_Dict["implicit"][element] = "The interactibility is discussed."
+                    Aspect_Dict["implicit"][
+                        element
+                    ] = "The interactibility is discussed."
 
             for element in interactability_keywords["adj"]:
                 if stem_token(element) in arr:
-                    Aspect_Dict["implicit"][element] = "The interactibility is discussed."
+                    Aspect_Dict["implicit"][
+                        element
+                    ] = "The interactibility is discussed."
 
             # for every element in battery explicit list
             for element in battery_keywords["explicit"]:
@@ -659,7 +675,13 @@ def detect_implicit_aspects(review, nlp):
                         element
                     ] = "The overall experience with the phone is discussed."
 
+            if stem_token("Pocket Rocket") in arr:
+                Aspect_Dict["implicit"][
+                    "Pocket Rocket"
+                ] = "The Phone's design and performance is discussed."
+
         check_every_keyword(filtered_words)
+
         if len(Aspect_Dict["subject"]) > 0:
             if stem_token(Aspect_Dict["subject"][0]) in phone_keywords["subjects"]:
                 if len(Aspect_Dict["adjective"]) > 0:
